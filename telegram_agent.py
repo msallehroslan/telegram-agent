@@ -1,13 +1,15 @@
 import requests
 import os
-import openai
+from openai import OpenAI
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, MessageHandler, filters
 
 # --- Configuration ---
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")  # Set in GitHub/host env
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")  # Set in GitHub/Render env
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
+
+# Initialize OpenAI client
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ThingSpeak channels
 POLY_URL = "https://api.thingspeak.com/channels/2749134/feeds/last.json?api_key=ELRZSYIQKSNMXSA4"
@@ -45,11 +47,11 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_input = update.message.text
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": user_input}]
         )
-        reply = response['choices'][0]['message']['content']
+        reply = response.choices[0].message.content
         await update.message.reply_text(reply)
     except Exception as e:
         await update.message.reply_text("⚠️ ChatGPT failed to respond.")
