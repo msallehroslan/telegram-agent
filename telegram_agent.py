@@ -11,7 +11,7 @@ openai.api_key = OPENAI_API_KEY
 
 # ThingSpeak channels
 POLY_URL = "https://api.thingspeak.com/channels/2749134/feeds/last.json?api_key=ELRZSYIQKSNMXSA4"
-LSTM_URL = "https://api.thingspeak.com/channels/2794578/feeds/last.json?api_key=LMIP2IUC9N5BC6QJ"
+LSTM_URL = "https://api.thingspeak.com/channels/2796258/feeds/last.json?api_key=G3MHZ8U7VD4W1GH3"
 
 # --- Functions ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
