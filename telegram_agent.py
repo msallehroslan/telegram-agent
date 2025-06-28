@@ -1,6 +1,6 @@
 import requests
 import os
-import openai
+from openai import OpenAI
 import matplotlib.pyplot as plt
 from datetime import datetime
 from telegram import Update, InputFile
@@ -10,7 +10,7 @@ from io import BytesIO
 # --- Configuration ---
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # ThingSpeak channels
 POLY_URL = "https://api.thingspeak.com/channels/2749134/feeds.json?api_key=ELRZSYIQKSNMXSA4&results=10"
@@ -117,14 +117,14 @@ async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"User asked: {user_input}"
         )
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that interprets IoT temperature predictions and anomalies."},
                 {"role": "user", "content": context_msg}
             ]
         )
-        reply = response['choices'][0]['message']['content']
+        reply = response.choices[0].message.content
         await update.message.reply_text(reply)
     except:
         await update.message.reply_text("⚠️ ChatGPT failed to respond.")
