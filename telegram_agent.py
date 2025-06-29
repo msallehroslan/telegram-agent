@@ -19,7 +19,10 @@ CURRENT_URL = "https://api.thingspeak.com/channels/2692605/fields/1/last.json?ap
 
 # --- Functions ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("\U0001F44B Welcome to TempCast Bot!\nType `status`, `trend`, `chart`, or ask me anything \U0001F916")
+    await update.message.reply_text(
+        "\U0001F44B Welcome to TempCast Bot!\nType `status`, `trend`, `chart`, or ask me anything \U0001F916",
+        parse_mode="Markdown"
+    )
 
 async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
@@ -46,7 +49,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 • Anomaly: {lstm_anom}
 """
         await update.message.reply_markdown(message)
-    except:
+    except Exception as e:
+        print("Error in status:", e)
         await update.message.reply_text("❌ Failed to fetch data from ThingSpeak.")
 
 async def trend(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -66,7 +70,8 @@ async def trend(update: Update, context: ContextTypes.DEFAULT_TYPE):
             lstm_trend, "Rising" if lstm_trend > 0 else "Falling" if lstm_trend < 0 else "Stable"
         )
         await update.message.reply_markdown(trend_msg)
-    except:
+    except Exception as e:
+        print("Error in trend:", e)
         await update.message.reply_text("⚠️ Could not analyze trend.")
 
 async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -97,7 +102,8 @@ async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buf.seek(0)
         await update.message.reply_photo(photo=InputFile(buf, filename="trend.png"))
         plt.close()
-    except:
+    except Exception as e:
+        print("Error in chart:", e)
         await update.message.reply_text("❌ Failed to generate chart.")
 
 async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -137,7 +143,7 @@ async def forecast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def forecast_hours(update: Update, hours: int):
     try:
-        send_func = update.message.reply_markdown if update.message else update.edit_message_text
+        send_func = update.message.reply_markdown if hasattr(update, "message") and update.message else update.edit_message_text
         poly_data = requests.get(POLY_URL).json()["feeds"]
         lstm_data = requests.get(LSTM_URL).json()["feeds"]
         poly = poly_data[-1]
@@ -153,31 +159,10 @@ async def forecast_hours(update: Update, hours: int):
         lstm_trend = float(lstm_data[-1]["field1"]) - float(lstm_data[0]["field1"])
 
         context_msg = (
-            f"Current: {current_temp} °C
-"
-            f"Polynomial: {poly_temp} °C (Anomaly: {poly_anom})
-"
-            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
-"
-            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
-
-"
-            f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
-        )
-"
-            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
-"
-            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
-
-"
-            f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
-        )
-"
-            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
-"
-            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
-
-"
+            f"Current: {current_temp} °C\n"
+            f"Polynomial: {poly_temp} °C (Anomaly: {poly_anom})\n"
+            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})\n"
+            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C\n\n"
             f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
         )
 
@@ -190,14 +175,15 @@ async def forecast_hours(update: Update, hours: int):
         )
 
         reply = response.choices[0].message.content
-        await send_func(f"📅 *Forecast in {hours} Hours*
+        await send_func(f"📅 *Forecast in {hours} Hours*\n\n{reply}", parse_mode="Markdown")
 
-{reply}", parse_mode="Markdown")
-
-    except:
+    except Exception as e:
+        print("Error in forecast_hours:", e)
         await send_func(f"❌ Forecast for {hours}h failed.")
 
-# (Other functions remain unchanged)
+# Dummy chatgpt_reply for fallback
+async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 I'm TempCast Bot! Use /status, /trend, /chart, /explain, or /forecast for features.")
 
 # --- Bot Setup ---
 def main():
