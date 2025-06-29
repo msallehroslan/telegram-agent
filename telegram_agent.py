@@ -15,6 +15,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # ThingSpeak channels
 POLY_URL = "https://api.thingspeak.com/channels/2749134/feeds.json?api_key=ELRZSYIQKSNMXSA4&results=10"
 LSTM_URL = "https://api.thingspeak.com/channels/2796258/feeds.json?api_key=G3MHZ8U7VD4W1GH3&results=10"
+CURRENT_URL = "https://api.thingspeak.com/channels/2692605/fields/1/last.json?api_key=60SQCX95B7XKZN2E"
 
 # --- Functions ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -24,6 +25,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         poly = requests.get(POLY_URL).json()["feeds"][-1]
         lstm = requests.get(LSTM_URL).json()["feeds"][-1]
+        current = requests.get(CURRENT_URL).json()
+        current_temp = current.get("field1", "N/A")
 
         poly_temp = poly.get("field1", "N/A")
         poly_anom = "⚠️ Yes - Check system!" if poly.get("field2", "0") == "1" else "✅ No"
@@ -40,6 +43,8 @@ async def status(update: Update, context: ContextTypes.DEFAULT_TYPE):
 🔁 *LSTM*
 • Predicted: {lstm_temp} °C
 • Anomaly: {lstm_anom}
+
+🟢 *Current Temperature*: {current_temp} °C
 """
         await update.message.reply_markdown(message)
     except Exception as e:
@@ -69,6 +74,9 @@ async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         poly_data = requests.get(POLY_URL).json()["feeds"]
         lstm_data = requests.get(LSTM_URL).json()["feeds"]
+        current = requests.get(CURRENT_URL).json()
+        current_temp = float(current.get("field1", "nan"))
+        current_time = datetime.strptime(current.get("created_at"), "%Y-%m-%dT%H:%M:%SZ")
 
         times = [datetime.strptime(d["created_at"], "%Y-%m-%dT%H:%M:%SZ") for d in poly_data]
         poly_vals = [float(d["field1"]) for d in poly_data]
@@ -77,6 +85,8 @@ async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         plt.figure(figsize=(10,5))
         plt.plot(times, poly_vals, label='Polynomial')
         plt.plot(times, lstm_vals, label='LSTM')
+        # Add the current temperature as a scatter (distinct point)
+        plt.scatter([current_time], [current_temp], color='red', label='Current Temp', marker='o', zorder=5)
         plt.legend()
         plt.title("Temperature Prediction (Last 10)")
         plt.xlabel("Time")
@@ -88,7 +98,7 @@ async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
         buf.seek(0)
         await update.message.reply_photo(photo=InputFile(buf, filename="trend.png"))
         plt.close()
-    except:
+    except Exception as e:
         await update.message.reply_text("❌ Failed to generate chart.")
 
 async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -105,15 +115,18 @@ async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         poly = requests.get(POLY_URL).json()["feeds"][-1]
         lstm = requests.get(LSTM_URL).json()["feeds"][-1]
+        current = requests.get(CURRENT_URL).json()
         poly_temp = poly.get("field1", "N/A")
         poly_anom = "Yes" if poly.get("field2", "0") == "1" else "No"
         lstm_temp = lstm.get("field1", "N/A")
         lstm_anom = "Yes" if lstm.get("field2", "0") == "1" else "No"
+        current_temp = current.get("field1", "N/A")
 
         context_msg = (
             f"The latest temperature predictions are:\n"
             f"- Polynomial: {poly_temp} °C, Anomaly: {poly_anom}\n"
             f"- LSTM: {lstm_temp} °C, Anomaly: {lstm_anom}\n"
+            f"- Current Temperature: {current_temp} °C\n"
             f"User asked: {user_input}"
         )
 
