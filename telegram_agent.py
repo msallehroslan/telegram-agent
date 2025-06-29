@@ -109,6 +109,78 @@ async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("ℹ️ Use `explain poly` or `explain lstm` for more details.")
 
+async def forecast_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("🕕 6 Hours", callback_data='forecast_6')],
+        [InlineKeyboardButton("🕛 12 Hours", callback_data='forecast_12')],
+        [InlineKeyboardButton("🌕 24 Hours", callback_data='forecast_24')],
+        [InlineKeyboardButton("📊 View Chart", callback_data='show_chart')],
+        [InlineKeyboardButton("🔙 Back to Menu", callback_data='start')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("Choose forecast interval:", reply_markup=reply_markup)
+
+async def forecast_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if query.data == 'forecast_6':
+        await forecast_hours(query, 6)
+    elif query.data == 'forecast_12':
+        await forecast_hours(query, 12)
+    elif query.data == 'forecast_24':
+        await forecast_hours(query, 24)
+    elif query.data == 'show_chart':
+        await chart(query, context)
+    elif query.data == 'start':
+        await start(query, context)
+
+async def forecast_hours(update: Update, hours: int):
+    try:
+        send_func = update.message.reply_markdown if update.message else update.edit_message_text
+        poly_data = requests.get(POLY_URL).json()["feeds"]
+        lstm_data = requests.get(LSTM_URL).json()["feeds"]
+        poly = poly_data[-1]
+        lstm = lstm_data[-1]
+
+        poly_temp = poly.get("field1", "N/A")
+        poly_anom = "Yes" if poly.get("field2", "0") == "1" else "No"
+        lstm_temp = lstm.get("field1", "N/A")
+        lstm_anom = "Yes" if lstm.get("field2", "0") == "1" else "No"
+        current_temp = requests.get(CURRENT_URL).json().get("field1", "N/A")
+
+        poly_trend = float(poly_data[-1]["field1"]) - float(poly_data[0]["field1"])
+        lstm_trend = float(lstm_data[-1]["field1"]) - float(lstm_data[0]["field1"])
+
+        context_msg = (
+            f"Current: {current_temp} °C
+"
+            f"Polynomial: {poly_temp} °C (Anomaly: {poly_anom})
+"
+            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
+"
+            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
+
+"
+            f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
+        )
+
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert in IoT sensor forecasting."},
+                {"role": "user", "content": context_msg}
+            ]
+        )
+
+        reply = response.choices[0].message.content
+        await send_func(f"📅 *Forecast in {hours} Hours*
+
+{reply}", parse_mode="Markdown")
+
+    except:
+        await send_func(f"❌ Forecast for {hours}h failed.")
+
 # (Other functions remain unchanged)
 
 # --- Bot Setup ---
