@@ -100,6 +100,15 @@ async def chart(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except:
         await update.message.reply_text("❌ Failed to generate chart.")
 
+async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.message.text.lower()
+    if "poly" in msg:
+        await update.message.reply_text("📈 Polynomial regression fits a curve to the data to model temperature changes. It's fast and good for smooth trends.")
+    elif "lstm" in msg:
+        await update.message.reply_text("🔁 LSTM (Long Short-Term Memory) is a type of neural network used for time-series predictions. It captures complex patterns and dependencies in temperature data.")
+    else:
+        await update.message.reply_text("ℹ️ Use `explain poly` or `explain lstm` for more details.")
+
 # (Other functions remain unchanged)
 
 # --- Bot Setup ---
