@@ -172,6 +172,14 @@ async def forecast_hours(update: Update, hours: int):
 "
             f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
         )
+"
+            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
+"
+            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
+
+"
+            f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
+        )
 
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
