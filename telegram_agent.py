@@ -154,7 +154,7 @@ async def forecast_hours(update: Update, hours: int):
 
         context_msg = (
             f"Current: {current_temp} °C
-"
+""
             f"Polynomial: {poly_temp} °C (Anomaly: {poly_anom})
 "
             f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
