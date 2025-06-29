@@ -154,8 +154,16 @@ async def forecast_hours(update: Update, hours: int):
 
         context_msg = (
             f"Current: {current_temp} °C
-""
+"
             f"Polynomial: {poly_temp} °C (Anomaly: {poly_anom})
+"
+            f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
+"
+            f"Poly trend: {poly_trend:+.2f} °C | LSTM trend: {lstm_trend:+.2f} °C
+
+"
+            f"Please forecast the temperature for the next {hours} hours and explain your reasoning."
+        )
 "
             f"LSTM: {lstm_temp} °C (Anomaly: {lstm_anom})
 "
