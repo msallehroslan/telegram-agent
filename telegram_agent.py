@@ -143,21 +143,50 @@ async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ ChatGPT failed to respond.")
 
 
-# --- Bot Setup ---
+# --- Bot Setup with Flask Webhook for Render ---
+from flask import Flask, request
+import asyncio
+import logging
+
+# Flask app for Render
+flask_app = Flask(__name__)
+
+# Telegram bot app
+app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+
+# Add handlers
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("status", status))
+app.add_handler(CommandHandler("trend", trend))
+app.add_handler(CommandHandler("chart", chart))
+app.add_handler(CommandHandler("explain", explain))
+app.add_handler(MessageHandler(filters.Regex("(?i)status|prediction|temp"), status))
+app.add_handler(MessageHandler(filters.Regex("(?i)explain"), explain))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatgpt_reply))
+
+# Webhook endpoint to receive Telegram updates
+@flask_app.route(f'/{TELEGRAM_TOKEN}', methods=['POST'])
+async def webhook():
+    update = Update.de_json(request.get_json(force=True), app.bot)
+    await app.process_update(update)
+    return 'ok'
+
+# Main entry point
 def main():
-    app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    logging.basicConfig(level=logging.INFO)
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status))
-    app.add_handler(CommandHandler("trend", trend))
-    app.add_handler(CommandHandler("chart", chart))
-    app.add_handler(CommandHandler("explain", explain))
-    app.add_handler(MessageHandler(filters.Regex("(?i)status|prediction|temp"), status))
-    app.add_handler(MessageHandler(filters.Regex("(?i)explain"), explain))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chatgpt_reply))
+    # Set webhook to your Render domain (set this env variable manually in Render)
+    render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if not render_hostname:
+        raise Exception("❌ RENDER_EXTERNAL_HOSTNAME is not set. Please set it in your Render environment.")
 
-    print("🤖 Bot is running...")
-    app.run_polling()
+    webhook_url = f"https://{render_hostname}/{TELEGRAM_TOKEN}"
+    asyncio.get_event_loop().run_until_complete(app.bot.set_webhook(webhook_url))
+    print(f"✅ Webhook set to {webhook_url}")
 
-if __name__ == '__main__':
+    # Start Flask server on Render-assigned port
+    port = int(os.environ.get("PORT", 5000))
+    flask_app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
     main()
