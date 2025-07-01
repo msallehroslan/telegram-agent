@@ -131,7 +131,7 @@ async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant that interprets IoT temperature predictions and anomalies."},
                 {"role": "user", "content": context_msg}
@@ -141,6 +141,7 @@ async def chatgpt_reply(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(reply)
     except:
         await update.message.reply_text("⚠️ ChatGPT failed to respond.")
+
 
 # --- Bot Setup ---
 def main():
